@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LoanLens · Loan Risk Predictor</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%235b4bff'/><circle cx='14' cy='14' r='6' fill='none' stroke='white' stroke-width='3'/><path d='M19 19l5 5' stroke='white' stroke-width='3' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --violet:#5b4bff; --violet-d:#4335e0; --violet-soft:#efedff; --ink:#1a1530; --muted:#6b6886; --line:#e8e6f2;
+  --bg:#f7f6fc; --green:#14a46c; --green-soft:#e5f7ef; --amber:#e08a00; --amber-soft:#fff4dd; --red:#e0483a; --red-soft:#fdeceb;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;font-family:"Plus Jakarta Sans","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+button,input{font:inherit;color:inherit}
+
+/* Header */
+.hero{background:radial-gradient(1200px 400px at 85% -10%,#8f7bff 0,transparent 60%),linear-gradient(135deg,#2a1f7a,#5b4bff);color:#fff;padding:22px 20px 110px}
+.nav{max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.25rem}
+.brand-icon{width:36px;height:36px;border-radius:11px;background:rgba(255,255,255,.16);display:grid;place-items:center}
+.status{display:flex;align-items:center;gap:8px;font-size:.82rem;background:rgba(255,255,255,.12);padding:6px 12px;border-radius:99px}
+.status i{width:8px;height:8px;border-radius:50%;background:#bbb}
+.status i.ok{background:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,.3)}
+.status i.bad{background:#f87171}
+.hero-text{max-width:980px;margin:46px auto 0;text-align:center}
+.hero h1{margin:0;font-size:clamp(2.3rem,6vw,3.6rem);font-weight:800;letter-spacing:-.03em}
+.hero h1 span{background:linear-gradient(90deg,#fff,#c9c1ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{margin:10px auto 0;max-width:560px;font-size:1.08rem;opacity:.9}
+
+/* Layout */
+.wrap{max-width:760px;margin:-72px auto 0;padding:0 16px 40px}
+.card{background:#fff;border-radius:24px;box-shadow:0 20px 50px -20px rgba(43,31,122,.25);border:1px solid var(--line)}
+.examples{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:16px 22px;border-bottom:1px solid var(--line);font-size:.88rem;color:var(--muted)}
+.examples button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 14px;cursor:pointer;font-weight:600;font-size:.85rem;transition:.15s}
+.examples button:hover{border-color:var(--violet);color:var(--violet)}
+
+/* Progress */
+.progress{display:flex;gap:8px;padding:22px 26px 0}
+.progress div{flex:1}
+.progress .bar{height:6px;border-radius:6px;background:var(--line);overflow:hidden}
+.progress .bar b{display:block;height:100%;width:0;background:var(--violet);transition:width .35s}
+.progress small{display:block;margin-top:6px;font-size:.78rem;color:var(--muted);font-weight:600}
+.progress .on small{color:var(--violet)}
+
+.step{display:none;padding:22px 26px 6px;animation:in .3s ease}
+.step.active{display:block}
+@keyframes in{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+.step h2{margin:0 0 4px;font-size:1.4rem;letter-spacing:-.02em}
+.step > p{margin:0 0 20px;color:var(--muted)}
+.q{margin-bottom:20px}
+.q > label,.q > .lbl{display:block;font-weight:700;margin-bottom:8px}
+.q .help{font-weight:500;color:var(--muted);font-size:.85rem}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.field{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:14px;background:#fff;transition:.15s}
+.field:focus-within{border-color:var(--violet);box-shadow:0 0 0 4px rgba(91,75,255,.12)}
+.field span{padding:0 0 0 14px;color:var(--muted);font-weight:600}
+.field span.r{padding:0 14px 0 0}
+.field input{border:0;outline:0;background:transparent;padding:13px 14px;width:100%;font-size:1.02rem;font-weight:600;min-width:0}
+input[type=range]{width:100%;accent-color:var(--violet);margin-top:10px}
+.err .field{border-color:var(--red);background:#fffafa}
+.err-msg{display:none;color:var(--red);font-size:.82rem;margin-top:6px;font-weight:600}
+.err .err-msg{display:block}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.tile{border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:12px;cursor:pointer;text-align:left;transition:.15s}
+.tile:hover{border-color:#c4bdfd}
+.tile .e{font-size:1.4rem;display:block;margin-bottom:4px}
+.tile b{display:block;font-size:.92rem}
+.tile[aria-checked=true]{border-color:var(--violet);background:var(--violet-soft);box-shadow:0 0 0 1px var(--violet)}
+.grades{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.grade{border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:10px 0;font-weight:800;cursor:pointer;transition:.15s}
+.grade[aria-checked=true]{background:var(--c);border-color:var(--c);color:#fff}
+.scale{display:flex;justify-content:space-between;font-size:.76rem;color:var(--muted);margin-top:6px;font-weight:600}
+.yesno{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.ratio{display:flex;align-items:center;gap:14px;background:var(--violet-soft);border-radius:14px;padding:14px 16px;margin-bottom:20px}
+.ratio b{font-size:1.5rem;color:var(--violet);min-width:64px}
+.ratio div{font-size:.88rem;color:#3f3a66}
+
+.nav-btns{display:flex;gap:10px;padding:10px 26px 26px}
+.btn{border:0;border-radius:14px;padding:14px 22px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:10px;transition:.15s}
+.btn.primary{flex:1;background:var(--violet);color:#fff;box-shadow:0 8px 20px -8px rgba(91,75,255,.7)}
+.btn.primary:hover{background:var(--violet-d)}
+.btn.primary:disabled{opacity:.7;cursor:wait}
+.btn.ghost{background:#fff;border:1.5px solid var(--line)}
+.btn.ghost:hover{border-color:var(--violet)}
+.spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:s .8s linear infinite;display:none}
+.loading .spin{display:inline-block}
+@keyframes s{to{transform:rotate(360deg)}}
+.alert{display:none;margin:0 26px 20px;background:var(--red-soft);color:#a3271c;border-radius:14px;padding:14px 16px;font-size:.9rem}
+.alert ul{margin:6px 0 0;padding-left:18px}
+
+/* Result */
+.result{display:none;margin-top:22px;overflow:hidden;animation:in .4s ease}
+.result.show{display:block}
+.r-top{padding:30px 26px 24px;text-align:center}
+.ring{position:relative;width:170px;height:170px;margin:0 auto}
+.ring svg{transform:rotate(-90deg)}
+.ring .num{position:absolute;inset:0;display:grid;place-items:center;align-content:center}
+.ring .num b{font-size:2.4rem;font-weight:800;letter-spacing:-.03em;line-height:1}
+.ring .num small{color:var(--muted);font-size:.78rem;font-weight:600}
+.verdict{display:inline-block;margin-top:16px;padding:8px 18px;border-radius:99px;font-weight:800;font-size:1.05rem}
+.verdict.low{background:var(--green-soft);color:var(--green)}
+.verdict.mid{background:var(--amber-soft);color:#a46400}
+.verdict.high{background:var(--red-soft);color:var(--red)}
+.r-top p{max-width:470px;margin:12px auto 0;color:var(--muted)}
+.reasons{border-top:1px solid var(--line);padding:22px 26px}
+.reasons h3{margin:0 0 14px;font-size:1.02rem}
+.reasons ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.reasons li{display:flex;gap:12px;align-items:flex-start;background:var(--bg);border-radius:14px;padding:12px 14px;font-size:.92rem}
+.reasons .ic{flex:none;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-weight:800}
+.ic.bad{background:var(--red-soft);color:var(--red)}
+.ic.good{background:var(--green-soft);color:var(--green)}
+.tech{border-top:1px solid var(--line);padding:16px 26px 22px}
+.tech summary{cursor:pointer;font-weight:700;color:var(--violet);font-size:.9rem}
+.tech table{width:100%;border-collapse:collapse;margin-top:12px;font-size:.88rem}
+.tech td{padding:7px 0;border-bottom:1px solid var(--line)}
+.tech td:last-child{text-align:right;font-weight:700}
+pre{background:#1a1530;color:#dcd8ff;border-radius:12px;padding:12px;font-size:.76rem;overflow:auto;margin:12px 0 0}
+.again{padding:0 26px 26px}
+.again .btn{width:100%}
+
+.note{display:flex;gap:12px;margin-top:20px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px 18px;font-size:.86rem;color:var(--muted)}
+.note b{color:var(--ink)}
+footer{text-align:center;font-size:.82rem;color:var(--muted);padding:6px 16px 34px}
+footer a{color:var(--violet);font-weight:600;text-decoration:none;margin:0 8px}
+
+@media(max-width:600px){
+  .hero{padding-bottom:96px}.hero-text{margin-top:30px}
+  .two{grid-template-columns:1fr}.grades{gap:5px}.grade{padding:9px 0}
+  .step,.progress{padding-left:18px;padding-right:18px}.nav-btns{padding:10px 18px 20px}
+  .status span{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <nav class="nav">
+    <div class="brand"><div class="brand-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#fff" stroke-width="2.6"/><path d="M15.5 15.5L21 21" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
+    </div>Loan risk predictor</div>
+    <div class="status"><i id="dot"></i><span id="statusText">Connecting…</span></div>
+  </nav>
+  <div class="hero-text">
+    <h1><span>LoanLens</span></h1>
+    <p>Answer a few simple questions and see how risky a loan application looks, in seconds.</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <form class="card" id="form" novalidate>
+    <div class="examples">Try an example:
+      <button type="button" data-ex="low">🟢 Safe applicant</button>
+      <button type="button" data-ex="mid">🟡 Typical applicant</button>
+      <button type="button" data-ex="high">🔴 Risky applicant</button>
+    </div>
+
+    <div class="progress" id="progress">
+      <div><div class="bar"><b></b></div><small>1 · About you</small></div>
+      <div><div class="bar"><b></b></div><small>2 · Your loan</small></div>
+      <div><div class="bar"><b></b></div><small>3 · Credit history</small></div>
+    </div>
+
+    <!-- STEP 1 -->
+    <section class="step active" data-step="0">
+      <h2>Tell us about yourself</h2>
+      <p>Basic details about the person applying.</p>
+      <div class="two">
+        <div class="q" data-f="person_age">
+          <label for="person_age">How old are you?</label>
+          <div class="field"><input id="person_age" type="number" inputmode="numeric"><span class="r">years</span></div>
+          <div class="err-msg"></div>
+        </div>
+        <div class="q" data-f="person_emp_length">
+          <label for="person_emp_length">Years in your job</label>
+          <div class="field"><input id="person_emp_length" type="number" step="0.5" inputmode="decimal"><span class="r">years</span></div>
+          <div class="err-msg"></div>
+        </div>
+      </div>
+      <div class="q" data-f="person_income">
+        <label for="person_income">Yearly income</label>
+        <div class="field"><span>$</span><input id="person_income" type="number" inputmode="numeric"></div>
+        <input type="range" id="income_r" min="5000" max="250000" step="1000" aria-label="Yearly income slider">
+        <div class="err-msg"></div>
+      </div>
+      <div class="q" data-f="person_home_ownership">
+        <div class="lbl">Where do you live?</div>
+        <div class="tiles" data-group="person_home_ownership">
+          <button type="button" class="tile" data-v="RENT"><span class="e">🏢</span><b>I rent</b></button>
+          <button type="button" class="tile" data-v="MORTGAGE"><span class="e">🏡</span><b>Paying a mortgage</b></button>
+          <button type="button" class="tile" data-v="OWN"><span class="e">🔑</span><b>I own my home</b></button>
+          <button type="button" class="tile" data-v="OTHER"><span class="e">🧳</span><b>Other</b></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="step" data-step="1">
+      <h2>About the loan</h2>
+      <p>How much is being borrowed, and what for.</p>
+      <div class="two">
+        <div class="q" data-f="loan_amnt">
+          <label for="loan_amnt">Loan amount</label>
+          <div class="field"><span>$</span><input id="loan_amnt" type="number" inputmode="numeric"></div>
+          <input type="range" id="amount_r" min="500" max="35000" step="500" aria-label="Loan amount slider">
+          <div class="err-msg"></div>
+        </div>
+        <div class="q" data-f="loan_int_rate">
+          <label for="loan_int_rate">Interest rate</label>
+          <div class="field"><input id="loan_int_rate" type="number" step="0.1" inputmode="decimal"><span class="r">%</span></div>
+          <input type="range" id="rate_r" min="5" max="25" step="0.1" aria-label="Interest rate slider">
+          <div class="err-msg"></div>
+        </div>
+      </div>
+      <div class="ratio"><b id="ratioVal">–</b><div id="ratioText">of yearly income goes to this loan.</div></div>
+      <div class="q" data-f="loan_intent">
+        <div class="lbl">What is the loan for?</div>
+        <div class="tiles" data-group="loan_intent">
+          <button type="button" class="tile" data-v="EDUCATION"><span class="e">🎓</span><b>Education</b></button>
+          <button type="button" class="tile" data-v="MEDICAL"><span class="e">🩺</span><b>Medical</b></button>
+          <button type="button" class="tile" data-v="PERSONAL"><span class="e">🛍️</span><b>Personal</b></button>
+          <button type="button" class="tile" data-v="VENTURE"><span class="e">🚀</span><b>Business</b></button>
+          <button type="button" class="tile" data-v="DEBTCONSOLIDATION"><span class="e">🔗</span><b>Combine debts</b></button>
+          <button type="button" class="tile" data-v="HOMEIMPROVEMENT"><span class="e">🛠️</span><b>Home repairs</b></button>
+        </div>
+      </div>
+      <div class="q" data-f="loan_grade">
+        <div class="lbl">Loan grade <span class="help">· given by the lender</span></div>
+        <div class="grades" data-group="loan_grade">
+          <button type="button" class="grade" data-v="A" style="--c:#14a46c">A</button>
+          <button type="button" class="grade" data-v="B" style="--c:#4bb37c">B</button>
+          <button type="button" class="grade" data-v="C" style="--c:#97b83d">C</button>
+          <button type="button" class="grade" data-v="D" style="--c:#e0a800">D</button>
+          <button type="button" class="grade" data-v="E" style="--c:#e57b2e">E</button>
+          <button type="button" class="grade" data-v="F" style="--c:#e0553a">F</button>
+          <button type="button" class="grade" data-v="G" style="--c:#c53327">G</button>
+        </div>
+        <div class="scale"><span>← Safest</span><span>Riskiest →</span></div>
+      </div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="step" data-step="2">
+      <h2>Credit history</h2>
+      <p>Past borrowing record from the credit bureau.</p>
+      <div class="q" data-f="cb_person_default_on_file">
+        <div class="lbl">Have you ever failed to repay a loan before?</div>
+        <div class="yesno" data-group="cb_person_default_on_file">
+          <button type="button" class="tile" data-v="N"><span class="e">✅</span><b>No, never</b></button>
+          <button type="button" class="tile" data-v="Y"><span class="e">⚠️</span><b>Yes, I have</b></button>
+        </div>
+      </div>
+      <div class="q" data-f="cb_person_cred_hist_length">
+        <label for="cb_person_cred_hist_length">How many years of credit history?</label>
+        <div class="field"><input id="cb_person_cred_hist_length" type="number" inputmode="numeric"><span class="r">years</span></div>
+        <div class="err-msg"></div>
+      </div>
+    </section>
+
+    <div class="alert" id="alert" role="alert"></div>
+
+    <div class="nav-btns">
+      <button type="button" class="btn ghost" id="back" hidden>← Back</button>
+      <button type="button" class="btn primary" id="next">Continue →</button>
+      <button type="submit" class="btn primary" id="submit" hidden><span class="spin"></span><span id="btnText">See my result</span></button>
+    </div>
+  </form>
+
+  <section class="card result" id="result" aria-live="polite">
+    <div class="r-top">
+      <div class="ring">
+        <svg width="170" height="170" viewBox="0 0 170 170">
+          <circle cx="85" cy="85" r="72" fill="none" stroke="#eeecf7" stroke-width="16"/>
+          <circle id="arc" cx="85" cy="85" r="72" fill="none" stroke-width="16" stroke-linecap="round"
+                  stroke-dasharray="452.4" stroke-dashoffset="452.4" style="transition:stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1)"/>
+        </svg>
+        <div class="num"><b id="pct">0%</b><small>risk score</small></div>
+      </div>
+      <div class="verdict" id="verdict"></div>
+      <p id="summary"></p>
+    </div>
+    <div class="reasons">
+      <h3>Why this result?</h3>
+      <ul id="reasons"></ul>
+    </div>
+    <details class="tech">
+      <summary>Technical details (for examiners)</summary>
+      <table>
+        <tr><td>Predicted class (loan_status)</td><td id="tClass"></td></tr>
+        <tr><td>Probability of loan_status = 1</td><td id="tProb"></td></tr>
+        <tr><td>Decision threshold</td><td id="tThr"></td></tr>
+        <tr><td>Model</td><td id="tModel"></td></tr>
+        <tr><td>Cross-validated ROC-AUC</td><td id="tAuc"></td></tr>
+      </table>
+      <pre id="tJson"></pre>
+    </details>
+    <div class="again"><button type="button" class="btn ghost" id="again">↺ Check another application</button></div>
+  </section>
+
+  <div class="note"><span>ℹ️</span><div><b>This is a student project, not a bank.</b> LoanLens uses a machine-learning model trained on a
+    Kaggle competition dataset. Its result is an estimate for learning purposes, not a real lending decision, and no outcome is guaranteed.</div></div>
+</main>
+
+<footer>CSL236 · Introduction to AI &amp; Machine Learning<br>
+  <a href="/docs" target="_blank">API docs</a><a href="/health" target="_blank">Health</a>
+  <a href="https://www.kaggle.com/competitions/loan-approval-prediction-ulima" target="_blank" rel="noopener">Kaggle</a></footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const NUM = ["person_age","person_income","person_emp_length","loan_amnt","loan_int_rate","cb_person_cred_hist_length"];
+const NAMES = {person_age:"Age", person_income:"Yearly income", person_emp_length:"Years in your job", loan_amnt:"Loan amount",
+  loan_int_rate:"Interest rate", loan_percent_income:"Loan-to-income ratio", cb_person_cred_hist_length:"Years of credit history",
+  person_home_ownership:"Where you live", loan_intent:"Loan purpose", loan_grade:"Loan grade", cb_person_default_on_file:"Previous missed repayment"};
+const STEP_OF = {person_age:0, person_income:0, person_emp_length:0, person_home_ownership:0, loan_amnt:1, loan_int_rate:1,
+  loan_intent:1, loan_grade:1, loan_percent_income:1, cb_person_default_on_file:2, cb_person_cred_hist_length:2};
+const EX = {
+  mid:  {person_age:28,person_income:60000,person_home_ownership:"RENT",person_emp_length:4,loan_intent:"EDUCATION",loan_grade:"B",loan_amnt:9000,loan_int_rate:11,cb_person_default_on_file:"N",cb_person_cred_hist_length:5},
+  low:  {person_age:41,person_income:120000,person_home_ownership:"OWN",person_emp_length:12,loan_intent:"HOMEIMPROVEMENT",loan_grade:"A",loan_amnt:6000,loan_int_rate:7.2,cb_person_default_on_file:"N",cb_person_cred_hist_length:14},
+  high: {person_age:24,person_income:22000,person_home_ownership:"RENT",person_emp_length:1,loan_intent:"DEBTCONSOLIDATION",loan_grade:"E",loan_amnt:10000,loan_int_rate:17.8,cb_person_default_on_file:"Y",cb_person_cred_hist_length:3},
+};
+const state = {}; let step = 0; let health = {};
+
+/* Choice buttons */
+function choose(group, v){
+  state[group] = v;
+  document.querySelectorAll(`[data-group="${group}"] [data-v]`).forEach(b => b.setAttribute("aria-checked", b.dataset.v === v));
+}
+document.querySelectorAll("[data-group]").forEach(g => {
+  g.setAttribute("role","radiogroup");
+  g.querySelectorAll("[data-v]").forEach(b => b.setAttribute("role","radio"));
+  g.addEventListener("click", e => { const b = e.target.closest("[data-v]"); if (b) choose(g.dataset.group, b.dataset.v); });
+});
+
+/* Sliders linked to number boxes */
+[["person_income","income_r"],["loan_amnt","amount_r"],["loan_int_rate","rate_r"]].forEach(([n,r]) => {
+  $("#"+r).addEventListener("input", () => { $("#"+n).value = $("#"+r).value; ratio(); });
+  $("#"+n).addEventListener("input", () => { $("#"+r).value = $("#"+n).value; ratio(); });
+});
+function lti(){
+  const a = +$("#loan_amnt").value, i = +$("#person_income").value;
+  return a > 0 && i > 0 ? Math.min(1, Math.round(a / i * 100) / 100) : null;
+}
+function ratio(){
+  const v = lti();
+  $("#ratioVal").textContent = v === null ? "–" : Math.round(v * 100) + "%";
+  $("#ratioText").textContent = v === null ? "of yearly income goes to this loan."
+    : v > 0.3 ? "of yearly income. That's high: loans above 30% of income were much riskier in our data."
+    : "of yearly income goes to this loan. Under 30% is a comfortable level.";
+}
+
+/* Steps */
+function go(n){
+  step = n;
+  document.querySelectorAll(".step").forEach((s,i) => s.classList.toggle("active", i === n));
+  document.querySelectorAll("#progress > div").forEach((d,i) => {
+    d.classList.toggle("on", i <= n); d.querySelector("b").style.width = i <= n ? "100%" : "0";
+  });
+  $("#back").hidden = n === 0; $("#next").hidden = n === 2; $("#submit").hidden = n !== 2;
+}
+$("#next").addEventListener("click", () => go(Math.min(step + 1, 2)));
+$("#back").addEventListener("click", () => go(Math.max(step - 1, 0)));
+
+function fill(p){
+  NUM.forEach(k => $("#"+k).value = p[k]);
+  $("#income_r").value = p.person_income; $("#amount_r").value = p.loan_amnt; $("#rate_r").value = p.loan_int_rate;
+  ["person_home_ownership","loan_intent","loan_grade","cb_person_default_on_file"].forEach(g => choose(g, p[g]));
+  clearErr(); ratio();
+}
+document.querySelectorAll("[data-ex]").forEach(b => b.addEventListener("click", () => { fill(EX[b.dataset.ex]); go(2); predict(); }));
+
+/* Errors */
+function clearErr(){ document.querySelectorAll(".q.err").forEach(q => q.classList.remove("err")); $("#alert").style.display = "none"; }
+function showErr(details){
+  let first = null;
+  const items = details.map(d => {
+    const f = (d.loc || []).slice(1).join(".");
+    const msg = (d.msg || "Invalid value").replace(/^Value error, /, "").replace("Input should be", "Must be");
+    const q = document.querySelector(`.q[data-f="${f}"]`);
+    if (q){ q.classList.add("err"); q.querySelector(".err-msg") && (q.querySelector(".err-msg").textContent = msg); }
+    if (first === null && f in STEP_OF) first = STEP_OF[f];
+    return `<li><b>${NAMES[f] || f || "Input"}</b>: ${msg}</li>`;
+  });
+  $("#alert").innerHTML = `<b>Please check your answers.</b><ul>${items.join("")}</ul>`;
+  $("#alert").style.display = "block";
+  if (first !== null) go(first);
+}
+
+/* Result */
+const fmt = p => p > 0.99 ? ">99%" : p < 0.01 ? "<1%" : Math.round(p * 100) + "%";
+const level = p => p >= 0.5 ? "high" : p >= 0.2 ? "mid" : "low";
+const COLORS = {low:"#14a46c", mid:"#e08a00", high:"#e0483a"};
+const WORDS = {
+  low:  ["Low risk", "This application looks similar to loans that went well in our training data."],
+  mid:  ["Medium risk", "Some warning signs. The model still places it below the high-risk line, but it is riskier than average."],
+  high: ["High risk", "This application looks similar to the high-risk loans in our training data."],
+};
+function reasons(d){
+  const r = [], pct = Math.round(d.loan_percent_income * 100);
+  r.push(pct > 30 ? ["bad", `The loan is <b>${pct}% of yearly income</b>. Above 30%, loans in our data were about 5 times more likely to be high-risk.`]
+                  : ["good", `The loan is only <b>${pct}% of yearly income</b>, which is a manageable amount.`]);
+  r.push("DEFG".includes(d.loan_grade) ? ["bad", `<b>Grade ${d.loan_grade}</b> is a lower grade. Grades D to G were high-risk 59–82% of the time.`]
+                                       : ["good", `<b>Grade ${d.loan_grade}</b> is a good grade. Grades A to C were high-risk only 5–14% of the time.`]);
+  if (d.cb_person_default_on_file === "Y") r.push(["bad", "A <b>previous missed repayment</b> nearly triples the risk (30% vs 11.5%)."]);
+  else r.push(["good", "<b>No previous missed repayments</b> on record."]);
+  if (d.person_home_ownership === "OWN") r.push(["good", "<b>Owning a home</b> was linked with the lowest risk of all (1.4%)."]);
+  else if (d.person_home_ownership === "RENT") r.push(["bad", "<b>Renters</b> were riskier in our data (22%) than homeowners (1–6%)."]);
+  return r.slice(0, 3);
+}
+function render(d, res){
+  const p = res.probability, lv = level(p);
+  $("#result").classList.add("show");
+  $("#arc").style.stroke = COLORS[lv];
+  $("#arc").style.strokeDashoffset = 452.4;
+  requestAnimationFrame(() => requestAnimationFrame(() => { $("#arc").style.strokeDashoffset = 452.4 * (1 - p); }));
+  const t0 = performance.now();
+  (function tick(t){ const k = Math.min((t - t0) / 1000, 1); const v = p * 100 * (1 - Math.pow(1 - k, 3)); $("#pct").textContent = k < 1 ? Math.round(v) + "%" : fmt(p); if (k < 1) requestAnimationFrame(tick); })(t0);
+  $("#verdict").className = "verdict " + lv; $("#verdict").textContent = WORDS[lv][0];
+  $("#summary").textContent = WORDS[lv][1];
+  $("#reasons").innerHTML = reasons(d).map(([t, s]) => `<li><span class="ic ${t}">${t === "bad" ? "!" : "✓"}</span><span>${s}</span></li>`).join("");
+  $("#tClass").textContent = res.loan_status + (res.loan_status ? " (high-risk)" : " (lower-risk)");
+  $("#tProb").textContent = res.probability.toFixed(4);
+  $("#tThr").textContent = res.threshold;
+  $("#tModel").textContent = ({xgboost:"XGBoost"})[health.model] || health.model || "–";
+  $("#tAuc").textContent = health.cv_roc_auc ? health.cv_roc_auc.toFixed(4) : "–";
+  $("#tJson").textContent = "POST /predict\n" + JSON.stringify(d, null, 2) + "\n\nResponse\n" + JSON.stringify(res, null, 2);
+  setTimeout(() => $("#result").scrollIntoView({behavior: "smooth", block: "start"}), 100);
+}
+$("#again").addEventListener("click", () => { $("#result").classList.remove("show"); go(0); window.scrollTo({top: 0, behavior: "smooth"}); });
+
+/* Call the API */
+function payload(){
+  const d = {};
+  NUM.forEach(k => { const v = $("#"+k).value; d[k] = v === "" ? null : Number(v); });
+  ["person_age","cb_person_cred_hist_length"].forEach(k => { if (d[k] !== null) d[k] = Math.round(d[k]); });
+  ["person_home_ownership","loan_intent","loan_grade","cb_person_default_on_file"].forEach(k => d[k] = state[k] ?? null);
+  d.loan_percent_income = lti();
+  return d;
+}
+async function predict(){
+  clearErr();
+  const btn = $("#submit"), d = payload();
+  btn.disabled = true; btn.classList.add("loading"); $("#btnText").textContent = "Analysing…";
+  try {
+    const res = await fetch("/predict", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(d)});
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 422) { $("#result").classList.remove("show"); showErr(body.detail || []); return; }
+    if (!res.ok) throw new Error(body.detail || `Server error (${res.status})`);
+    render(d, body);
+  } catch (e) {
+    $("#alert").innerHTML = `<b>Something went wrong.</b> ${e.message === "Failed to fetch" ? "Can't reach the server. Is it running?" : e.message}`;
+    $("#alert").style.display = "block";
+  } finally {
+    btn.disabled = false; btn.classList.remove("loading"); $("#btnText").textContent = "See my result";
+  }
+}
+$("#form").addEventListener("submit", e => { e.preventDefault(); predict(); });
+
+fetch("/health").then(r => r.json()).then(h => {
+  health = h;
+  $("#dot").className = h.model_loaded ? "ok" : "bad";
+  $("#statusText").textContent = h.model_loaded ? "Model online" : "Model not loaded";
+}).catch(() => { $("#dot").className = "bad"; $("#statusText").textContent = "Offline"; });
+
+fill(EX.mid); go(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Kaggle data is never committed. If a KAGGLE_API_TOKEN secret exists we
+      # download the real data; otherwise we use a small synthetic fixture.
+      - name: Get training data
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+        run: |
+          if [ -n "$KAGGLE_API_TOKEN" ]; then
+            python data/download_data.py
+            echo "DATA=data/raw/train.csv" >> "$GITHUB_ENV"
+          else
+            python data/make_ci_fixture.py data/ci_fixture.csv
+            echo "DATA=data/ci_fixture.csv" >> "$GITHUB_ENV"
+          fi
+
+      - name: Train baseline model (smoke test of train.py)
+        run: >
+          python train.py --model logistic_regression --data "$DATA" --test ""
+          --output /tmp/ci_model/model.joblib --save always --no_mlflow --cv_folds 3
+
+      - name: Run tests against the committed model
+        run: pytest -v --tb=short
+
+      - name: Check serving requirements are importable
+        run: python -c "import app; print('app imports OK')"

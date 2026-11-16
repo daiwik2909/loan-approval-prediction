@@ -1,0 +1,45 @@
+{
+  "run_name": "xgboost_20261103_112556",
+  "params": {
+    "model": "xgboost",
+    "cv_folds": 5,
+    "val_size": 0.2,
+    "seed": 42,
+    "n_estimators": 1200,
+    "max_depth": 4,
+    "learning_rate": 0.03,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8
+  },
+  "metrics": {
+    "cv_roc_auc_mean": 0.9556564728876891,
+    "cv_roc_auc_std": 0.001925499497682407,
+    "val_roc_auc": 0.9579266161979649,
+    "val_accuracy": 0.9524256117316054,
+    "val_precision": 0.9199395770392749,
+    "val_recall": 0.7293413173652694,
+    "val_f1": 0.8136272545090181,
+    "val_log_loss": 0.14600974321365356,
+    "train_seconds": 26.5
+  },
+  "features": [
+    "person_age",
+    "person_income",
+    "person_emp_length",
+    "loan_amnt",
+    "loan_int_rate",
+    "loan_percent_income",
+    "cb_person_cred_hist_length",
+    "person_home_ownership",
+    "loan_intent",
+    "loan_grade",
+    "cb_person_default_on_file"
+  ],
+  "target": "loan_status",
+  "positive_class": 1,
+  "threshold": 0.5,
+  "trained_at": "2026-11-03T11:25:56+00:00",
+  "python": "3.11.18",
+  "sklearn": "1.9.1",
+  "training_rows": 58645
+}
