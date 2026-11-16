@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
 
 # Serving dependencies only (no MLflow, pytest or plotting libraries).
 COPY requirements-serve.txt .
-RUN pip install --no-cache-dir -r requirements-serve.txt
+RUN pip install --no-cache-dir --default-timeout=120 --retries 5 -r requirements-serve.txt
 
 COPY app.py loan_features.py ./
 COPY model/ ./model/
@@ -27,5 +27,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
   CMD python -c "import urllib.request,os; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PORT\",\"8000\")}/health')"
 
-# Shell form so $PORT works on Render/Railway (they inject PORT); defaults to 8000.
-CMD uvicorn app:app --host 0.0.0.0 --port ${PORT}
+# sh -c expands $PORT (Render/Railway inject it; default 8000). exec makes uvicorn PID 1 so it receives stop signals.
+CMD ["sh", "-c", "exec uvicorn app:app --host 0.0.0.0 --port ${PORT}"]
