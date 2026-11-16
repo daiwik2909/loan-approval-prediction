@@ -2,7 +2,8 @@
 
 Usage: python monitoring/drift_check.py --train data/raw/train.csv --log logs/predictions.jsonl
 
-Uses the Population Stability Index (PSI) per feature:
+Prints mean and standard deviation of every numeric input (training vs logged), then
+the Population Stability Index (PSI) per feature:
   PSI < 0.10 -> stable   0.10-0.25 -> moderate shift   > 0.25 -> significant drift
 """
 import argparse
@@ -35,6 +36,11 @@ def main() -> None:
     print(f"Training rows: {len(train)} | logged predictions: {len(live)}")
     if len(live) < a.min_rows:
         print(f"Warning: fewer than {a.min_rows} logged rows, so PSI values are unreliable.\n")
+
+    print(f"\n{'feature':28s} {'train mean':>12s} {'live mean':>12s} {'train std':>12s} {'live std':>12s}")
+    for c in NUMERIC_FEATURES:
+        print(f"{c:28s} {train[c].mean():12.2f} {live[c].mean():12.2f} {train[c].std():12.2f} {live[c].std():12.2f}")
+    print()
 
     rows = []
     for c in NUMERIC_FEATURES:

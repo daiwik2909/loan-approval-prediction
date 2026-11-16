@@ -1,22 +1,19 @@
-# Environments
+# Environments (never commit)
 venv/
 .venv/
 .env
 kaggle.json
 access_token
 
-# Kaggle data must not be committed
-data/raw/
-data/*.csv
-data/*.zip
-
-# Generated files
+# Python / tooling
 __pycache__/
 *.pyc
 .pytest_cache/
 mlruns/
+
+# Generated at runtime
 logs/
 submissions/
 reports/figures/
-
-# Keep: model/model.joblib, model/metadata.json, mlflow.db (allowed by the guidelines)
+data/*.zip
+data/ci_fixture.csv

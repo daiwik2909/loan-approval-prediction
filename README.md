@@ -13,7 +13,8 @@ front end, pytest tests, a Docker image, GitHub Actions CI, cloud deployment and
 | API docs (Swagger) | https://loan-approval-prediction-5d14.onrender.com/docs |
 | Health check | https://loan-approval-prediction-5d14.onrender.com/health |
 | GitHub repository | https://github.com/daiwik2909/loan-approval-prediction |
-| CI run (passing) | https://github.com/daiwik2909/loan-approval-prediction/actions/runs/43894209461 |
+| CI run (passing) | https://github.com/daiwik2909/loan-approval-prediction/actions/runs/43897858771 |
+| Project report (PDF) | https://github.com/daiwik2909/loan-approval-prediction/blob/main/docs/Daiwik_Dogra_24CSU048.pdf |
 | Kaggle competition | https://www.kaggle.com/competitions/loan-approval-prediction-ulima |
 
 [![CI](https://github.com/daiwik2909/loan-approval-prediction/actions/workflows/ci.yml/badge.svg)](https://github.com/daiwik2909/loan-approval-prediction/actions/workflows/ci.yml)
@@ -22,6 +23,8 @@ front end, pytest tests, a Docker image, GitHub Actions CI, cloud deployment and
 > lending decision and do not guarantee any outcome.
 
 ---
+
+![Architecture](docs/architecture.png)
 
 ## 1. Problem statement
 
@@ -34,7 +37,6 @@ with *riskier* profiles: grades D–G (59–82% positive vs 5% for grade A), a p
 renting (22% vs 1.4% for owners) and loans above 30% of income (68–76%). This matches the original credit-risk
 dataset this competition is based on, where 1 = default. The app therefore labels class 1 as a
 **"high-risk profile"** rather than "approved".
-<!-- TODO: confirm against the Data tab on Kaggle and update this paragraph if the page says otherwise. -->
 
 ## 2. Dataset
 
@@ -45,8 +47,12 @@ dataset this competition is based on, where 1 = default. The app therefore label
 | `sample_submission.csv` | 39,098 × 2 | `id`, `loan_status` (probability) |
 
 No missing values and no duplicate rows. Train and test have the same columns and the same category values.
-Class balance: 85.76% class 0, **14.24% class 1** (8,350 rows). The data is **not** committed to this repository;
-see [Installation](#7-installation-windows-powershell).
+Class balance: 85.76% class 0, **14.24% class 1** (8,350 rows).
+
+**Source:** Kaggle competition *Loan Approval Prediction ULIMA*,
+https://www.kaggle.com/competitions/loan-approval-prediction-ulima (public competition data). The three CSVs total
+about 6 MB, well under the 50 MB limit, so they are committed in `data/raw/` and a fresh clone can train straight
+away. `data/download_data.py` re-downloads them through the Kaggle API if needed.
 
 ## 3. Data contract
 
@@ -142,12 +148,26 @@ Each run logs algorithm, hyperparameters, CV mean/std, validation ROC-AUC, accur
 loss and training time. `train.py` saves `model/model.joblib` (plus `model/metadata.json`) only when the run beats
 the saved model's CV ROC-AUC (`--save always` forces it). No personal data is logged to MLflow.
 
-![MLflow runs](docs/mlflow.png)
+![MLflow runs](docs/mlflow_runs.png)
+
+![MLflow run comparison](docs/mlflow_compare_table.png)
 
 **Submission files:** each `train.py` run also writes a Kaggle-format prediction file (`id`, `loan_status` probability
 for all 39,098 test rows) to `submissions/`, validated against `sample_submission.csv`.
 
-## 7. Installation (Windows PowerShell)
+## 7. Installation
+
+Linux / macOS:
+
+```bash
+git clone https://github.com/daiwik2909/loan-approval-prediction.git
+cd loan-approval-prediction
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python train.py                      # baseline run on the committed data, logged to MLflow
+```
+
+Windows PowerShell:
 
 ```powershell
 git clone https://github.com/daiwik2909/loan-approval-prediction.git
@@ -155,16 +175,12 @@ cd loan-approval-prediction
 py -3.11 -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+python train.py
 ```
 
-Get the data. It is not in git:
-
-```powershell
-kaggle auth login                 # one-time browser login (or set $env:KAGGLE_API_TOKEN)
-python data\download_data.py      # downloads, unzips, verifies the three CSVs
-```
-
-You must click **Join Competition** on Kaggle first, otherwise the download returns 403.
+`python train.py` with no arguments trains the logistic-regression baseline. It replaces `model/model.joblib` only if
+its CV ROC-AUC beats the saved model. Optional: `kaggle auth login` then `python data/download_data.py --force`
+re-downloads the data through the Kaggle API.
 
 ## 8. Running locally
 
@@ -195,9 +211,15 @@ POST /predict
 
 The model is loaded **once** at startup (FastAPI `lifespan`), never inside `/predict`.
 
-![LoanLens UI](docs/live_ui.png)
+![LoanLens UI](docs/ui_home.png)
 
-![Swagger /docs](docs/live_docs.png)
+![LoanLens prediction](docs/ui_prediction.png)
+
+![Invalid input rejected in the UI](docs/ui_422.png)
+
+![Swagger /docs: valid request, HTTP 200](docs/docs_predict_200.png)
+
+![Swagger /docs: age 15, HTTP 422](docs/docs_predict_422.png)
 
 ## 10. Tests
 
@@ -217,7 +239,7 @@ The model is loaded **once** at startup (FastAPI `lifespan`), never inside `/pre
 The domain test checks only the **order** of two extreme profiles, built from EDA rates, with a margin. It does not
 assume any single feature guarantees an outcome, because tree models are not monotonic feature by feature.
 
-![pytest](docs/pytest.png)
+![pytest -v output](docs/pytest_output.png)
 
 ## 11. Docker
 
@@ -245,9 +267,9 @@ Image size: _TODO_ MB (run `docker images loan-approval-prediction`).
 Optional secret: GitHub repo → Settings → Secrets and variables → Actions → New secret `KAGGLE_API_TOKEN`. GitHub
 masks secrets in logs.
 
-**Latest passing run:** https://github.com/daiwik2909/loan-approval-prediction/actions/runs/43894209461 (completed in about 1 minute)
+**Latest passing run:** https://github.com/daiwik2909/loan-approval-prediction/actions/runs/43897858771 (completed in about 1 minute)
 
-![CI run](docs/ci.png)
+![Green CI run](docs/ci_green.png)
 
 ## 13. Deployment
 
@@ -263,9 +285,16 @@ first request can take about a minute.
 ## 14. Monitoring
 
 Every `/predict` call appends one JSON line (request id, timestamp, the 11 inputs, probability, class) to
-`logs/predictions.jsonl`. No names, IDs or IP addresses are stored. `monitoring/drift_check.py` compares logged
-inputs with the training data using the **Population Stability Index** (PSI < 0.10 stable, 0.10–0.25 moderate,
-> 0.25 drift). It needs a few hundred logged rows to be reliable. If key features drift or the live positive rate
+`logs/predictions.jsonl`. No names, IDs or IP addresses are stored. A real sample log of 25 API calls is committed as
+`monitoring/sample_predictions.jsonl`.
+
+`monitoring/drift_check.py` (bonus) compares logged inputs with the training data. It prints the **mean and standard
+deviation** of every numeric input for training vs live data, then the **Population Stability Index** per feature
+(PSI < 0.10 stable, 0.10–0.25 moderate, > 0.25 drift). It needs a few hundred logged rows to be reliable.
+
+```powershell
+python monitoring\drift_check.py --log monitoring\sample_predictions.jsonl
+``` If key features drift or the live positive rate
 moves away from 14%, the model should be re-validated and retrained.
 
 On Render's free tier the log file is lost when the service restarts. A production system would send logs to a
@@ -275,13 +304,16 @@ database or object storage.
 
 ```
 loan-approval-prediction/
-├── data/download_data.py        Kaggle download + verification
+├── data/raw/                    train.csv, test.csv, sample_submission.csv (Kaggle, about 6 MB)
+├── data/download_data.py        Kaggle API download + verification
 ├── data/make_ci_fixture.py      synthetic CI data (not used for scores)
 ├── model/model.joblib           trained pipeline (preprocessing + XGBoost)
 ├── model/metadata.json          params, metrics, versions of the saved model
 ├── static/index.html            web UI
 ├── tests/test_app.py            18 pytest tests
-├── monitoring/drift_check.py    PSI drift report
+├── monitoring/drift_check.py    drift report: mean/std + PSI vs training data
+├── monitoring/sample_predictions.jsonl   sample prediction log (25 real API calls)
+├── docs/                        screenshots and architecture diagram
 ├── .github/workflows/ci.yml     CI pipeline
 ├── app.py                       FastAPI service
 ├── train.py                     training + CV + MLflow
@@ -295,9 +327,12 @@ loan-approval-prediction/
 
 ## 16. Team
 
-| Member | Contribution |
-|---|---|
-| _TODO_ | _TODO_ |
+| Member | Roll number | Contribution |
+|---|---|---|
+| Daiwik Dogra | 24CSU048 | Dataset selection and EDA, feature engineering (`loan_features.py`), training pipeline and MLflow experiments (`train.py`), model selection, report |
+| Madhav Sharma | 24CSU117 | FastAPI service and Pydantic data contract (`app.py`), LoanLens UI, pytest suite, Dockerfile, GitHub Actions CI, Render deployment, prediction logging and drift check, presentation |
+
+Both members worked on the README and can run and explain every stage.
 
 ## 17. Limitations
 
