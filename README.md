@@ -7,6 +7,17 @@ An end-to-end ML system for the Kaggle competition
 It covers EDA, a cross-validated model comparison tracked in MLflow, a FastAPI + Pydantic service with an HTML
 front end, pytest tests, a Docker image, GitHub Actions CI, cloud deployment and prediction logging with a drift check.
 
+| | Link |
+|---|---|
+| Live app (LoanLens) | https://loan-approval-prediction-5d14.onrender.com |
+| API docs (Swagger) | https://loan-approval-prediction-5d14.onrender.com/docs |
+| Health check | https://loan-approval-prediction-5d14.onrender.com/health |
+| GitHub repository | https://github.com/daiwik2909/loan-approval-prediction |
+| CI run (passing) | https://github.com/daiwik2909/loan-approval-prediction/actions/runs/43894209461 |
+| Kaggle competition | https://www.kaggle.com/competitions/loan-approval-prediction-ulima |
+
+[![CI](https://github.com/daiwik2909/loan-approval-prediction/actions/workflows/ci.yml/badge.svg)](https://github.com/daiwik2909/loan-approval-prediction/actions/workflows/ci.yml)
+
 > **Educational project.** Predictions come from a model trained on a competition dataset. They are not a real
 > lending decision and do not guarantee any outcome.
 
@@ -131,21 +142,15 @@ Each run logs algorithm, hyperparameters, CV mean/std, validation ROC-AUC, accur
 loss and training time. `train.py` saves `model/model.joblib` (plus `model/metadata.json`) only when the run beats
 the saved model's CV ROC-AUC (`--save always` forces it). No personal data is logged to MLflow.
 
-**MLflow screenshot:** `![MLflow runs](docs/mlflow.png)` <!-- TODO: add screenshot -->
+![MLflow runs](docs/mlflow.png)
 
-## Kaggle results
-
-| Submission | File | Public score | Private score |
-|---|---|---|---|
-| 1 – baseline | `submissions/submission_1_baseline_logistic_regression.csv` | _TODO_ | _TODO_ |
-| 2 – best | `submissions/submission_2_best_xgboost.csv` | _TODO_ | _TODO_ |
-
-Leaderboard rank: _TODO_ of _TODO_ teams (percentile _TODO_). <!-- fill in after submitting -->
+**Submission files:** each `train.py` run also writes a Kaggle-format prediction file (`id`, `loan_status` probability
+for all 39,098 test rows) to `submissions/`, validated against `sample_submission.csv`.
 
 ## 7. Installation (Windows PowerShell)
 
 ```powershell
-git clone <your-repo-url>
+git clone https://github.com/daiwik2909/loan-approval-prediction.git
 cd loan-approval-prediction
 py -3.11 -m venv venv
 .\venv\Scripts\Activate.ps1
@@ -190,7 +195,9 @@ POST /predict
 
 The model is loaded **once** at startup (FastAPI `lifespan`), never inside `/predict`.
 
-**UI screenshots:** `![UI](docs/ui.png)` <!-- TODO -->
+![LoanLens UI](docs/live_ui.png)
+
+![Swagger /docs](docs/live_docs.png)
 
 ## 10. Tests
 
@@ -210,7 +217,7 @@ The model is loaded **once** at startup (FastAPI `lifespan`), never inside `/pre
 The domain test checks only the **order** of two extreme profiles, built from EDA rates, with a margin. It does not
 assume any single feature guarantees an outcome, because tree models are not monotonic feature by feature.
 
-**Test screenshot:** <!-- TODO -->
+![pytest](docs/pytest.png)
 
 ## 11. Docker
 
@@ -236,11 +243,17 @@ Image size: _TODO_ MB (run `docker images loan-approval-prediction`).
 4. Runs `pytest` against the committed `model/model.joblib`.
 
 Optional secret: GitHub repo → Settings → Secrets and variables → Actions → New secret `KAGGLE_API_TOKEN`. GitHub
-masks secrets in logs. **CI screenshot / latest run:** <!-- TODO -->
+masks secrets in logs.
+
+**Latest passing run:** https://github.com/daiwik2909/loan-approval-prediction/actions/runs/43894209461 (completed in about 1 minute)
+
+![CI run](docs/ci.png)
 
 ## 13. Deployment
 
-Live URL: _TODO_ · Swagger: _TODO_/docs <!-- fill in after deploying -->
+**Live URL:** https://loan-approval-prediction-5d14.onrender.com · **Swagger:** https://loan-approval-prediction-5d14.onrender.com/docs · **Health:** https://loan-approval-prediction-5d14.onrender.com/health
+
+Deployed on Render (free tier, Singapore region) as a Docker web service built from this repository's `Dockerfile`, with health check path `/health` and auto-deploy on every push to `main`.
 
 Render (free tier): push the repo to GitHub → Render → New → Web Service → connect the repo → Runtime **Docker** →
 Instance type Free → Health check path `/health` → Deploy. Render sets `$PORT`, which the Dockerfile reads. Restart
